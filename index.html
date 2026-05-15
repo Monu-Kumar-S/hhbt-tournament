@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Hamilton Homes Badminton Tournament</title>
+
+<style>
+
+body{
+    font-family:Arial,sans-serif;
+    background:#121212;
+    color:#fff;
+    margin:0;
+    padding:0;
+}
+
+header{
+    background:#1b5e20;
+    padding:20px;
+    text-align:center;
+    font-size:28px;
+    font-weight:bold;
+}
+
+.dashboard{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    padding:20px;
+}
+
+.card{
+    background:#1e1e1e;
+    border-radius:10px;
+    padding:20px;
+    margin:15px;
+    width:330px;
+    box-shadow:0 4px 8px rgba(0,0,0,0.5);
+}
+
+.card h3{
+    margin-top:0;
+}
+
+input,select,button{
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+    border:none;
+    border-radius:5px;
+    box-sizing:border-box;
+}
+
+button{
+    background:#2e7d32;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#388e3c;
+}
+
+.reset-btn{
+    background:#b71c1c;
+}
+
+.reset-btn:hover{
+    background:#d32f2f;
+}
+
+.undo-btn{
+    background:#1565c0;
+}
+
+.undo-btn:hover{
+    background:#1976d2;
+}
+
+.redo-btn{
+    background:#6a1b9a;
+}
+
+.redo-btn:hover{
+    background:#8e24aa;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+th,td{
+    border:1px solid #444;
+    padding:8px;
+    text-align:center;
+}
+
+th{
+    background:#2e7d32;
+}
+
+.rank-1{
+    background:#ffd700;
+    color:black;
+}
+
+.rank-2{
+    background:#c0c0c0;
+    color:black;
+}
+
+.rank-3{
+    background:#cd7f32;
+    color:black;
+}
+
+.full-width{
+    width:95%;
+}
+
+.note{
+    color:#fdd835;
+    font-size:12px;
+    margin-top:8px;
+}
+
+.action-buttons button{
+    margin-top:10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+🏸 Hamilton Homes Badminton Tournament
+</header>
+
+<div class="dashboard">
+
+<!-- ADD TEAM -->
+
+<div class="card">
+
+<h3>Add Team</h3>
+
+<input
+type="text"
+id="teamName"
+placeholder="Enter Team Name"
+/>
+
+<select id="teamCategory">
+
+<option value="">Select Category</option>
+
+<option value="Advance">Advance</option>
+
+<option value="Competitive">Competitive</option>
+
+<option value="Semi-Competitive">Semi-Competitive</option>
+
+<option value="Intermediate">Intermediate</option>
+
+</select>
+
+<div class="note">
+Final category allocation will be decided by committee to ensure fair play.
+</div>
+
+<button id="addTeamBtn">
+Add Team
+</button>
+
+</div>
+
+<!-- ADD MATCH -->
+
+<div class="card">
+
+<h3>Add Match Result</h3>
+
+<select id="teamA"></select>
+
+<select id="teamB"></select>
+
+<input
+type="number"
+id="scoreA"
+placeholder="Team A Score"
+/>
+
+<input
+type="number"
+id="scoreB"
+placeholder="Team B Score"
+/>
+
+<button id="addMatchBtn">
+Add Match
+</button>
+
+</div>
+
+<!-- ACTIONS -->
+
+<div class="card">
+
+<h3>Tournament Controls</h3>
+
+<div class="action-buttons">
+
+<button class="undo-btn" id="undoBtn">
+Undo Last Match
+</button>
+
+<button class="redo-btn" id="redoBtn">
+Redo Last Match
+</button>
+
+<button class="reset-btn" id="resetBtn">
+Reset Tournament
+</button>
+
+</div>
+
+</div>
+
+<!-- MATCH HISTORY -->
+
+<div class="card full-width">
+
+<h3>Match History</h3>
+
+<div id="matchHistory">
+Loading...
+</div>
+
+</div>
+
+<!-- RANKINGS -->
+
+<div class="card full-width">
+
+<h3>Team Rankings</h3>
+
+<div id="rankingTable">
+Loading...
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const apiBase = "http://127.0.0.1:3000"
+
+let deletedMatch = null
+
+// LOAD TEAMS
+
+async function loadTeams(){
+
+    const res = await fetch(apiBase + "/teams")
+
+    const teams = await res.json()
+
+    const teamA = document.getElementById("teamA")
+
+    const teamB = document.getElementById("teamB")
+
+    teamA.innerHTML = ""
+
+    teamB.innerHTML = ""
+
+    teams.forEach(t=>{
+
+        let optA = document.createElement("option")
+
+        optA.value = t._id
+
+        optA.textContent = t.name
+
+        teamA.appendChild(optA)
+
+        let optB = document.createElement("option")
+
+        optB.value = t._id
+
+        optB.textContent = t.name
+
+        teamB.appendChild(optB)
+
+    })
+
+    loadRankings(teams)
+}
+
+// ADD TEAM
+
+async function addTeam(){
+
+    const name = document.getElementById("teamName").value
+
+    const category = document.getElementById("teamCategory").value
+
+    if(!name || !category){
+
+        return alert("Enter team name and category")
+    }
+
+    const res = await fetch(apiBase + "/add-team",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify({
+            name,
+            category
+        })
+
+    })
+
+    if(res.ok){
+
+        alert("Team Added")
+
+        document.getElementById("teamName").value = ""
+
+        document.getElementById("teamCategory").value = ""
+
+        loadTeams()
+
+    }else{
+
+        alert("Error adding team")
+    }
+}
+
+// ADD MATCH
+
+async function addMatch(){
+
+    const teamA = document.getElementById("teamA").value
+
+    const teamB = document.getElementById("teamB").value
+
+    const scoreA = parseInt(document.getElementById("scoreA").value)
+
+    const scoreB = parseInt(document.getElementById("scoreB").value)
+
+    if(!teamA || !teamB || isNaN(scoreA) || isNaN(scoreB)){
+
+        return alert("Fill all fields")
+    }
+
+    if(teamA === teamB){
+
+        return alert("Select different teams")
+    }
+
+    const res = await fetch(apiBase + "/add-match",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify({
+            teamA,
+            teamB,
+            scoreA,
+            scoreB
+        })
+
+    })
+
+    if(res.ok){
+
+        alert("Match Added")
+
+        document.getElementById("scoreA").value = ""
+
+        document.getElementById("scoreB").value = ""
+
+        loadMatches()
+
+        loadTeams()
+
+    }else{
+
+        alert("Error adding match")
+    }
+}
+
+// LOAD MATCHES
+
+async function loadMatches(){
+
+    const res = await fetch(apiBase + "/matches")
+
+    const matches = await res.json()
+
+    let html = `
+    <table>
+    <tr>
+    <th>#</th>
+    <th>Team A</th>
+    <th>Score</th>
+    <th>Team B</th>
+    <th>Score</th>
+    </tr>
+    `
+
+    matches.forEach((m,index)=>{
+
+        html += `
+        <tr>
+        <td>${index+1}</td>
+        <td>${m.teamA.name}</td>
+        <td>${m.scoreA}</td>
+        <td>${m.teamB.name}</td>
+        <td>${m.scoreB}</td>
+        </tr>
+        `
+    })
+
+    html += "</table>"
+
+    document.getElementById("matchHistory").innerHTML = html
+}
+
+// LOAD RANKINGS
+
+function loadRankings(teams){
+
+    let stats = {}
+
+    teams.forEach(t=>{
+
+        stats[t._id] = {
+            name:t.name,
+            category:t.category,
+            played:0,
+            wins:0,
+            losses:0,
+            points:0,
+            scoreDiff:0
+        }
+    })
+
+    fetch(apiBase + "/matches")
+
+    .then(res=>res.json())
+
+    .then(matches=>{
+
+        matches.forEach(m=>{
+
+            stats[m.teamA._id].played++
+
+            stats[m.teamB._id].played++
+
+            stats[m.teamA._id].scoreDiff += (m.scoreA - m.scoreB)
+
+            stats[m.teamB._id].scoreDiff += (m.scoreB - m.scoreA)
+
+            if(m.scoreA > m.scoreB){
+
+                stats[m.teamA._id].wins++
+
+                stats[m.teamA._id].points += 2
+
+                stats[m.teamB._id].losses++
+
+            }else{
+
+                stats[m.teamB._id].wins++
+
+                stats[m.teamB._id].points += 2
+
+                stats[m.teamA._id].losses++
+            }
+
+        })
+
+        let arr = Object.values(stats)
+
+        arr.sort((a,b)=>b.points-a.points || b.scoreDiff-a.scoreDiff)
+
+        let html = `
+        <table>
+        <tr>
+        <th>Rank</th>
+        <th>Team</th>
+        <th>Category</th>
+        <th>Played</th>
+        <th>Wins</th>
+        <th>Losses</th>
+        <th>Points</th>
+        <th>Score Diff</th>
+        </tr>
+        `
+
+        arr.forEach((t,i)=>{
+
+            let cls = i==0?"rank-1":i==1?"rank-2":i==2?"rank-3":""
+
+            html += `
+            <tr class="${cls}">
+            <td>${i+1}</td>
+            <td>${t.name}</td>
+            <td>${t.category}</td>
+            <td>${t.played}</td>
+            <td>${t.wins}</td>
+            <td>${t.losses}</td>
+            <td>${t.points}</td>
+            <td>${t.scoreDiff}</td>
+            </tr>
+            `
+        })
+
+        html += "</table>"
+
+        document.getElementById("rankingTable").innerHTML = html
+    })
+}
+
+// UNDO LAST MATCH
+
+async function undoLastMatch(){
+
+    const res = await fetch(apiBase + "/undo-last-match",{
+        method:"DELETE"
+    })
+
+    const data = await res.json()
+
+    if(data.success){
+
+        deletedMatch = data.match
+
+        alert("Last Match Removed")
+
+        loadMatches()
+
+        loadTeams()
+
+    }else{
+
+        alert("No match available")
+    }
+}
+
+// REDO LAST MATCH
+
+async function redoLastMatch(){
+
+    if(!deletedMatch){
+
+        return alert("Nothing to redo")
+    }
+
+    const res = await fetch(apiBase + "/add-match",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify({
+            teamA:deletedMatch.teamA._id,
+            teamB:deletedMatch.teamB._id,
+            scoreA:deletedMatch.scoreA,
+            scoreB:deletedMatch.scoreB
+        })
+
+    })
+
+    if(res.ok){
+
+        alert("Match Restored")
+
+        deletedMatch = null
+
+        loadMatches()
+
+        loadTeams()
+
+    }
+}
+
+// RESET
+
+async function resetTournament(){
+
+    const confirmReset = confirm(
+        "Delete all tournament data permanently?"
+    )
+
+    if(!confirmReset) return
+
+    const res = await fetch(apiBase + "/reset",{
+        method:"DELETE"
+    })
+
+    if(res.ok){
+
+        alert("Tournament Reset")
+
+        loadMatches()
+
+        loadTeams()
+
+    }else{
+
+        alert("Error resetting")
+    }
+}
+
+// BUTTON EVENTS
+
+document.getElementById("addTeamBtn").onclick = addTeam
+
+document.getElementById("addMatchBtn").onclick = addMatch
+
+document.getElementById("undoBtn").onclick = undoLastMatch
+
+document.getElementById("redoBtn").onclick = redoLastMatch
+
+document.getElementById("resetBtn").onclick = resetTournament
+
+// INITIAL LOAD
+
+loadTeams()
+
+loadMatches()
+
+</script>
+
+</body>
+
+</html>
