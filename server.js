@@ -14,7 +14,7 @@ app.use(express.json())
 // ======================
 
 mongoose.connect(
-    "mongodb://127.0.0.1:27017/hhbt",
+    "mongoose.connect(process.env.MONGO_URL)",
     {
         serverSelectionTimeoutMS:5000
     }
