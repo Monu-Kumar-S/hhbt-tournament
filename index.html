@@ -446,6 +446,8 @@ async function loadMatches(){
 
 // LOAD RANKINGS
 
+<script>
+
 function loadRankings(teams){
 
     let stats = {}
@@ -461,6 +463,7 @@ function loadRankings(teams){
             points:0,
             scoreDiff:0
         }
+
     })
 
     fetch(apiBase + "/matches")
@@ -494,52 +497,97 @@ function loadRankings(teams){
                 stats[m.teamB._id].points += 2
 
                 stats[m.teamA._id].losses++
+
             }
 
         })
 
         let arr = Object.values(stats)
 
-        arr.sort((a,b)=>b.points-a.points || b.scoreDiff-a.scoreDiff)
+        // CATEGORY LIST
+        const categories = [
+            "Advance",
+            "Intermediate Plus",
+            "Intermediate",
+            "Beginner"
+        ]
 
-        let html = `
-        <table>
-        <tr>
-        <th>Rank</th>
-        <th>Team</th>
-        <th>Category</th>
-        <th>Played</th>
-        <th>Wins</th>
-        <th>Losses</th>
-        <th>Points</th>
-        <th>Score Diff</th>
-        </tr>
-        `
+        let finalHTML = ""
 
-        arr.forEach((t,i)=>{
+        categories.forEach(category=>{
 
-            let cls = i==0?"rank-1":i==1?"rank-2":i==2?"rank-3":""
+            let filtered = arr.filter(
+                t => t.category === category
+            )
 
-            html += `
-            <tr class="${cls}">
-            <td>${i+1}</td>
-            <td>${t.name}</td>
-            <td>${t.category}</td>
-            <td>${t.played}</td>
-            <td>${t.wins}</td>
-            <td>${t.losses}</td>
-            <td>${t.points}</td>
-            <td>${t.scoreDiff}</td>
+            filtered.sort(
+                (a,b)=> b.points-a.points || b.scoreDiff-a.scoreDiff
+            )
+
+            finalHTML += `
+            <h2 style="
+                margin-top:30px;
+                color:#81c784;
+                text-align:center;
+            ">
+                ${category} Category
+            </h2>
+
+            <table>
+            <tr>
+                <th>Rank</th>
+                <th>Team</th>
+                <th>Played</th>
+                <th>Wins</th>
+                <th>Losses</th>
+                <th>Points</th>
+                <th>Score Diff</th>
             </tr>
             `
+
+            filtered.forEach((t,i)=>{
+
+                let cls = i==0
+                    ? "rank-1"
+                    : i==1
+                    ? "rank-2"
+                    : i==2
+                    ? "rank-3"
+                    : ""
+
+                finalHTML += `
+                <tr class="${cls}">
+                    <td>${i+1}</td>
+                    <td>${t.name}</td>
+                    <td>${t.played}</td>
+                    <td>${t.wins}</td>
+                    <td>${t.losses}</td>
+                    <td>${t.points}</td>
+                    <td>${t.scoreDiff}</td>
+                </tr>
+                `
+            })
+
+            if(filtered.length === 0){
+
+                finalHTML += `
+                <tr>
+                    <td colspan="7">
+                        No Teams Available
+                    </td>
+                </tr>
+                `
+            }
+
+            finalHTML += "</table>"
+
         })
 
-        html += "</table>"
+        document.getElementById("rankingTable").innerHTML = finalHTML
 
-        document.getElementById("rankingTable").innerHTML = html
     })
-}
 
+}
 // UNDO LAST MATCH
 
 async function undoLastMatch(){
